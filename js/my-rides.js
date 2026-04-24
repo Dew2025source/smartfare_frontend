@@ -1,4 +1,4 @@
-const API_BASE = window.location.origin;
+const API_BASE = "https://smartfarebackend-production.up.railway.app";
 let bookings = [];
 let pendingDeleteId = null;
 let isDeleting = false;

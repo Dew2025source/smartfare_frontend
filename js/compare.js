@@ -2,7 +2,7 @@
 // Compare page — Searchable Location Inputs
 // ─────────────────────────────────────────────
 
-const API_BASE = window.location.origin;
+const API_BASE = "https://smartfarebackend-production.up.railway.app";
 
 // Selected location values (the "real" state)
 let fromValue = '';

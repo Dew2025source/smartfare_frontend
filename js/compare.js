@@ -134,19 +134,41 @@ function setupCurrentLocation() {
     btn.innerHTML = '<span class="spinner-border-custom me-2"></span> Detecting…';
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        fromValue = CURRENT_LOCATION_NAME;
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        let detectedName = CURRENT_LOCATION_NAME;
+        let detectedDisplayName = `Current Location (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+
+        try {
+          btn.innerHTML = '<span class="spinner-border-custom me-2"></span> Finding area name…';
+          const reverseRes = await fetch(`${API_BASE}/api/geocode/reverse?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`);
+          const reverseData = await reverseRes.json();
+          const location = reverseData.success ? reverseData.data.location : null;
+
+          if (location) {
+            detectedName = location.name || detectedName;
+            detectedDisplayName = location.displayName || detectedDisplayName;
+          }
+        } catch (error) {
+          console.warn('Reverse geocode failed:', error);
+        }
+
+        fromValue = detectedName;
         fromLocation = {
-          name: CURRENT_LOCATION_NAME,
-          displayName: CURRENT_LOCATION_NAME,
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
+          name: detectedName,
+          displayName: detectedDisplayName,
+          lat,
+          lng,
           source: 'browser-current-location'
         };
 
         const fromInput = document.getElementById('fromInput');
         const fromClear = document.getElementById('fromClear');
-        if (fromInput) fromInput.value = CURRENT_LOCATION_NAME;
+        if (fromInput) {
+          fromInput.value = detectedName;
+          fromInput.title = detectedDisplayName;
+        }
         syncInputState(fromInput, fromClear, fromValue);
 
         btn.disabled = false;

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartFare - Compare Ride Fares Instantly</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script>
+  (function () {
+    const savedTheme = localStorage.getItem("smartfare-theme") || "dark";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  })();
+</script>
+</head>
+<body class="grid-bg">
+
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="/">
+        <span class="logo-box"><span class="logo-letter">S</span></span>
+        <span class="brand-text">Smart<span class="brand-accent">Fare</span></span>
+      </a>
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto me-3" id="navLinks"></ul>
+        <div class="d-flex gap-2" id="navButtons"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero-section position-relative">
+      <div class="ambient-blob blob-1"></div>
+      <div class="ambient-blob blob-2"></div>
+      <div class="container">
+        <div class="row justify-content-center text-center">
+          <div class="col-lg-9">
+            <div class="fade-in">
+              <div class="hero-badge">
+                <span class="pulse-dot"></span>
+                Delhi NCR · 80+ Routes · Live Fares
+              </div>
+            </div>
+            <h1 class="hero-title fade-in-1">
+              Stop Guessing.<br>
+              <span class="gradient-text">Compare & Save.</span>
+            </h1>
+            <p class="hero-subtitle fade-in-2">
+              Instantly compare Ola, Uber & Rapido fares for any Delhi route.
+              Find the cheapest ride and book in one tap.
+            </p>
+            <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center fade-in-3">
+              <a href="/compare" class="btn btn-primary-custom">
+                Compare Fares Now
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+              <a href="/signup" class="btn btn-outline-custom">Create Free Account</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Services -->
+    <section class="py-5">
+      <div class="container">
+        <p class="text-center text-uppercase mb-4" style="letter-spacing:0.12em; font-size:0.7rem; color:var(--text-muted); font-weight:600;">
+          Compare across all major platforms
+        </p>
+        <div class="row g-4">
+          <div class="col-md-4">
+            <div class="service-card ola h-100">
+              <div class="d-flex align-items-center mb-4">
+                <span class="service-icon">🟢</span>
+                <div>
+                  <h5 class="mb-0 fw-bold">Ola</h5>
+                  <p class="mb-0 small" style="color:var(--text-muted)">India's largest ride platform</p>
+                </div>
+              </div>
+              <div class="small" style="color:var(--text-secondary); line-height:2;">
+                <div>Bike — <strong>₹5/km</strong></div>
+                <div>Mini — <strong>₹10/km</strong></div>
+                <div>Sedan — <strong>₹15/km</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="service-card uber h-100">
+              <div class="d-flex align-items-center mb-4">
+                <span class="service-icon">⬛</span>
+                <div>
+                  <h5 class="mb-0 fw-bold">Uber</h5>
+                  <p class="mb-0 small" style="color:var(--text-muted)">Reliable rides, everywhere</p>
+                </div>
+              </div>
+              <div class="small" style="color:var(--text-secondary); line-height:2;">
+                <div>Bike — <strong>₹6/km</strong></div>
+                <div>Mini — <strong>₹11/km</strong></div>
+                <div>Sedan — <strong>₹16/km</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="service-card rapido h-100">
+              <div class="d-flex align-items-center mb-4">
+                <span class="service-icon">🟡</span>
+                <div>
+                  <h5 class="mb-0 fw-bold">Rapido</h5>
+                  <p class="mb-0 small" style="color:var(--text-muted)">Budget-friendly bike rides</p>
+                </div>
+              </div>
+              <div class="small" style="color:var(--text-secondary); line-height:2;">
+                <div>Bike Lite — <strong>₹3.5/km</strong></div>
+                <div>Bike — <strong>₹4/km</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="py-5">
+      <div class="container">
+        <h2 class="text-center fw-bold mb-2" style="letter-spacing:-0.02em;">How it works</h2>
+        <p class="text-center mb-5" style="color:var(--text-muted); font-size:0.9rem;">Four steps to finding the best fare</p>
+        <div class="row g-4">
+          <div class="col-md-3 col-6">
+            <div class="step-card">
+              <div class="step-number">01</div>
+              <div class="step-icon">📍</div>
+              <h5 class="fw-semibold mb-2" style="font-size:0.95rem;">Pick Locations</h5>
+              <p class="small mb-0" style="color:var(--text-muted)">Select pickup and drop-off from 80+ Delhi locations</p>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="step-card">
+              <div class="step-number">02</div>
+              <div class="step-icon">⚡</div>
+              <h5 class="fw-semibold mb-2" style="font-size:0.95rem;">Instant Fares</h5>
+              <p class="small mb-0" style="color:var(--text-muted)">Live fares calculated across all services</p>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="step-card">
+              <div class="step-number">03</div>
+              <div class="step-icon">💰</div>
+              <h5 class="fw-semibold mb-2" style="font-size:0.95rem;">Compare & Choose</h5>
+              <p class="small mb-0" style="color:var(--text-muted)">Options ranked by price, cheapest highlighted</p>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="step-card">
+              <div class="step-number">04</div>
+              <div class="step-icon">🚗</div>
+              <h5 class="fw-semibold mb-2" style="font-size:0.95rem;">Book & Ride</h5>
+              <p class="small mb-0" style="color:var(--text-muted)">Jump directly to Ola, Uber, or Rapido</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-5 my-3">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-lg-7">
+            <div class="text-center p-5" style="background:linear-gradient(135deg,rgba(124,92,252,0.1),rgba(124,92,252,0.04)); border:1px solid rgba(124,92,252,0.2); border-radius:var(--radius-xl);">
+              <h2 class="fw-bold mb-3" style="letter-spacing:-0.02em;">Ready to save on every ride?</h2>
+              <p class="mb-4" style="color:var(--text-secondary);">Join thousands of Delhi commuters who compare before every trip.</p>
+              <a href="/compare" class="btn btn-primary-custom mx-auto" style="max-width:220px;">
+                Start Comparing →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer-custom">
+      <div class="container">
+        <div class="row align-items-center">
+          <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
+            <div class="d-inline-flex align-items-center">
+              <span class="logo-box me-2"><span class="logo-letter">S</span></span>
+              <span class="fw-bold" style="font-family:'Syne',sans-serif;">Smart<span class="brand-accent">Fare</span></span>
+            </div>
+          </div>
+          <div class="col-md-4 text-center mb-3 mb-md-0">
+            <small style="color:var(--text-muted);">© 2024 SmartFare · Delhi NCR · Fares are estimated</small>
+          </div>
+          <div class="col-md-4 text-center text-md-end">
+            <a href="/compare" class="me-3">Compare</a>
+            <a href="/my-rides">My Rides</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/navbar.js"></script>
+</body>
+</html>

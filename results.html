@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fare Results - SmartFare</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script>
+  (function () {
+    const savedTheme = localStorage.getItem("smartfare-theme") || "dark";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  })();
+</script>
+  <style>
+    /* ── Fare card buttons ── */
+    .fare-card .book-btn {
+      background: linear-gradient(135deg, var(--primary, #6366f1), var(--primary-dark, #4f46e5));
+      color: white;
+      border: none;
+      padding: 0.65rem 1.2rem;
+      border-radius: var(--radius-sm, 8px);
+      font-size: 0.85rem; font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .fare-card .book-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px var(--primary-glow, rgba(99,102,241,0.35));
+      color: white;
+    }
+    .fare-card .book-btn:disabled { opacity: 0.75; cursor: not-allowed; }
+
+    .fare-card .open-app-btn {
+      background: rgba(255,255,255,0.05);
+      color: var(--text-secondary, #aaa);
+      border: 1px solid var(--border, rgba(255,255,255,0.08));
+      padding: 0.65rem 1rem;
+      border-radius: var(--radius-sm, 8px);
+      font-size: 0.85rem; font-weight: 600;
+      transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .fare-card .open-app-btn:hover {
+      background: rgba(255,255,255,0.09);
+      border-color: rgba(255,255,255,0.16);
+      color: var(--text-primary, #fff);
+      transform: translateY(-2px);
+    }
+
+    /* ── Cheapest badge ── */
+    .fare-card.cheapest { border-color: rgba(99,102,241,0.4); }
+    .cheapest-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--primary, #6366f1), var(--primary-dark, #4f46e5));
+      color: white;
+      font-size: 0.7rem; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px;
+      margin-bottom: 10px;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Fare card hover ── */
+    .fare-card {
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .fare-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    }
+
+    /* ── Route pill ── */
+    .route-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border, rgba(255,255,255,0.08));
+      border-radius: 50px;
+      padding: 8px 18px; font-size: 0.85rem;
+    }
+
+    /* ── Button spinner ── */
+    .btn-spinner {
+      display: inline-block;
+      width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Skeleton loader ── */
+    .fare-skeleton {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 1.5rem;
+    }
+    .skel-block {
+      background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.05) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer {
+      from { background-position: 200% 0; }
+      to   { background-position: -200% 0; }
+    }
+    .skel-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .skel-header { margin-bottom: 16px; }
+    .skel-icon  { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; }
+    .skel-col   { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .skel-right { align-items: flex-end; min-width: 80px; }
+    .skel-title { height: 16px; width: 70%; }
+    .skel-sub   { height: 12px; width: 45%; }
+    .skel-price { height: 22px; width: 60px; border-radius: 8px; }
+    .skel-eta   { height: 11px; width: 50px; }
+    .skel-badges { gap: 8px; }
+    .skel-badge { height: 22px; width: 72px; border-radius: 20px; }
+    .skel-btn   { height: 40px; width: 100%; margin-top: 4px; border-radius: 8px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 576px) {
+      .fare-card .book-btn,
+      .fare-card .open-app-btn { width: 100%; justify-content: center; }
+      .fare-card > .d-flex.gap-2 { flex-direction: column; }
+    }
+  </style>
+</head>
+<body class="grid-bg">
+
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="/">
+        <span class="logo-box"><span class="logo-letter">S</span></span>
+        <span class="brand-text">Smart<span class="brand-accent">Fare</span></span>
+      </a>
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto me-3" id="navLinks"></ul>
+        <div class="d-flex gap-2" id="navButtons"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main style="min-height:100vh; padding-top:100px; padding-bottom:60px;">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-7 col-md-9">
+
+          <div class="text-center mb-5 fade-in">
+            <a href="/compare" class="btn btn-outline-custom btn-sm mb-4">← Change Route</a>
+            <h1 class="fw-bold mb-3" style="letter-spacing:-0.03em;">Fare Comparison</h1>
+            <div class="route-pill justify-content-center mx-auto" style="width:fit-content;">
+              <span id="routeFrom" class="fw-semibold"></span>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="opacity:0.45;flex-shrink:0;">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span id="routeTo" class="fw-semibold"></span>
+              <span style="color:var(--text-muted);">·</span>
+              <span id="routeDistance" style="color:var(--text-muted);"></span>
+            </div>
+          </div>
+
+          <div id="faresContainer" class="d-grid gap-3"></div>
+
+          <div class="card-custom mt-4 p-4 fade-in">
+            <h6 class="fw-semibold mb-3" style="font-size:0.85rem;">💡 About These Fares</h6>
+            <ul class="small mb-0 ps-3" style="color:var(--text-muted); line-height:1.9;">
+              <li>All fares are estimates based on standard rates per kilometer</li>
+              <li>Actual fares may vary based on traffic, demand, and time of day</li>
+              <li>Minimum fare is ₹30 for all services</li>
+              <li>Book through the app for real-time pricing and availability</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/results.js"></script>
+</body>
+</html>

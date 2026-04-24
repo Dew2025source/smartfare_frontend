@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Rides - SmartFare</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script>
+  (function () {
+    const savedTheme = localStorage.getItem("smartfare-theme") || "dark";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  })();
+</script>
+  <style>
+    /* ── Loading spinner ── */
+    .loading-spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(255,255,255,0.08);
+      border-top-color: var(--primary, #6366f1);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Stats grid ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      padding: 1.25rem 1rem;
+      text-align: center;
+      transition: border-color 0.22s, transform 0.22s, box-shadow 0.22s;
+    }
+    .stat-card:hover {
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+    }
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-muted, #666);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    /* ── Ride card ── */
+    .ride-card {
+      padding: 1.2rem 1.4rem;
+      border-radius: 14px;
+      transition: transform 0.22s, border-color 0.22s, box-shadow 0.22s;
+    }
+    .ride-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255,255,255,0.13);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+
+    /* ── Ride type badge ── */
+    .ride-type-badge {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.09);
+      color: var(--text-muted, #999);
+      font-size: 0.67rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    /* ── Delete button ── */
+    .delete-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(239,68,68,0.07);
+      border: 1px solid rgba(239,68,68,0.16);
+      color: #fca5a5;
+      padding: 5px 11px;
+      border-radius: 8px;
+      font-size: 0.77rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .delete-btn:hover {
+      background: rgba(239,68,68,0.14);
+      border-color: rgba(239,68,68,0.32);
+      transform: translateY(-1px) scale(1.02);
+      box-shadow: 0 4px 12px rgba(239,68,68,0.12);
+    }
+    .delete-btn:active {
+      transform: scale(0.97);
+    }
+
+    .modal-icon {
+      width: 56px; height: 56px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.18);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+      font-size: 1.4rem;
+    }
+    .btn-cancel-modal {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-muted, #aaa);
+      padding: 0.68rem 1.2rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.18s, border-color 0.18s;
+      flex: 1;
+    }
+    .btn-cancel-modal:hover {
+      background: rgba(255,255,255,0.09);
+      border-color: rgba(255,255,255,0.18);
+    }
+    .btn-danger-confirm {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      border: none;
+      padding: 0.68rem 1.2rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.2s, transform 0.18s, box-shadow 0.2s;
+      flex: 1;
+    }
+    .btn-danger-confirm:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(239,68,68,0.3);
+    }
+    .btn-danger-confirm:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 576px) {
+      .stats-grid { gap: 8px; }
+      .stat-value { font-size: 1.2rem; }
+      .ride-card { padding: 1rem; }
+      .delete-btn { padding: 4px 9px; font-size: 0.74rem; }
+    }
+  </style>
+</head>
+<body class="grid-bg">
+
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="/">
+        <span class="logo-box"><span class="logo-letter">S</span></span>
+        <span class="brand-text">Smart<span class="brand-accent">Fare</span></span>
+      </a>
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto me-3" id="navLinks"></ul>
+        <div class="d-flex gap-2" id="navButtons"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main style="min-height:100vh; padding-top:100px; padding-bottom:60px;">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+
+          <div class="mb-4 fade-in">
+            <h1 class="fw-bold mb-1" style="letter-spacing:-0.03em;">My Rides</h1>
+            <p style="color:var(--text-muted); font-size:0.875rem; margin:0;">
+              Your booking history &amp; stats
+            </p>
+          </div>
+
+          <div class="stats-grid fade-in" style="animation-delay:0.05s;">
+            <div class="stat-card">
+              <div class="stat-label">Bookings</div>
+              <div class="stat-value" id="statsTotal">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Total Spent</div>
+              <div class="stat-value" id="statsAmount">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Distance</div>
+              <div class="stat-value" id="statsDistance">—</div>
+            </div>
+          </div>
+
+          <div id="bookingsContainer" class="d-grid gap-3"></div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="modal-custom" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-backdrop-custom"></div>
+    <div class="modal-content-custom">
+      <div class="text-center mb-4">
+        <div class="modal-icon">🗑️</div>
+        <h5 class="fw-bold mb-2" id="deleteModalTitle">Delete Booking?</h5>
+        <p style="color:var(--text-muted); font-size:0.875rem; margin:0; line-height:1.65;">
+          Are you sure you want to delete this ride?<br>This action cannot be undone.
+        </p>
+      </div>
+      <div class="d-flex gap-3">
+        <button data-dismiss="deleteModal" class="btn-cancel-modal">Cancel</button>
+        <button id="confirmDeleteBtn" class="btn-danger-confirm">Delete Ride</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/my-rides.js"></script>
+</body>
+</html>

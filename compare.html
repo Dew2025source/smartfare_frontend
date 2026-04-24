@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compare Fares - SmartFare</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script>
+  (function () {
+    const savedTheme = localStorage.getItem("smartfare-theme") || "dark";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  })();
+</script>
+
+  <style>
+    /* ─── LOCATION SEARCH WIDGET ─── */
+    .location-search-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    .location-input-field {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 0.875rem 2.75rem 0.875rem 1rem;
+      border-radius: var(--radius-md);
+      transition: var(--transition);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.92rem;
+      width: 100%;
+      outline: none;
+      caret-color: var(--primary-light);
+    }
+
+    .location-input-field:focus {
+      background: rgba(255, 255, 255, 0.065);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(124, 92, 252, 0.18);
+    }
+
+    .location-input-field::placeholder {
+      color: var(--text-muted);
+    }
+
+    .location-input-field.has-value {
+      border-color: rgba(124, 92, 252, 0.35);
+      color: var(--text-primary);
+    }
+
+    /* Clear button inside input */
+    .location-clear-btn {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      transition: color 0.15s, background 0.15s;
+      font-size: 0.8rem;
+      line-height: 1;
+    }
+
+    .location-clear-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .location-clear-btn.visible {
+      display: flex;
+    }
+
+    /* Suggestions dropdown */
+    .location-suggestions {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: var(--dark-card);
+      border: 1px solid var(--border-hover);
+      border-radius: var(--radius-md);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(124, 92, 252, 0.1);
+      z-index: 1000;
+      overflow: hidden;
+      max-height: 260px;
+      overflow-y: auto;
+
+      /* Animation */
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
+      transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .location-suggestions.open {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+
+    /* Custom scrollbar for suggestions */
+    .location-suggestions::-webkit-scrollbar { width: 4px; }
+    .location-suggestions::-webkit-scrollbar-track { background: transparent; }
+    .location-suggestions::-webkit-scrollbar-thumb { background: rgba(124,92,252,0.3); border-radius: 4px; }
+
+    /* Suggestion items */
+    .suggestion-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.7rem 1rem;
+      cursor: pointer;
+      transition: background 0.12s;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+
+    .suggestion-item:hover,
+    .suggestion-item.highlighted {
+      background: rgba(124, 92, 252, 0.1);
+      color: var(--text-primary);
+    }
+
+    .suggestion-item:hover .suggestion-icon,
+    .suggestion-item.highlighted .suggestion-icon {
+      color: var(--primary-light);
+    }
+
+    .suggestion-icon {
+      color: var(--text-muted);
+      flex-shrink: 0;
+      transition: color 0.12s;
+      display: flex;
+      align-items: center;
+    }
+
+    .suggestion-text {
+      flex-grow: 1;
+    }
+
+    .suggestion-text mark {
+      background: none;
+      color: var(--primary-light);
+      font-weight: 600;
+      padding: 0;
+    }
+
+    /* No results */
+    .suggestion-empty {
+      padding: 1rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body class="grid-bg">
+
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="/">
+        <span class="logo-box"><span class="logo-letter">S</span></span>
+        <span class="brand-text">Smart<span class="brand-accent">Fare</span></span>
+      </a>
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto me-3" id="navLinks"></ul>
+        <div class="d-flex gap-2" id="navButtons"></div>
+      </div>
+    </div>
+  </nav>
+
+  <main style="min-height:100vh; padding-top:100px; padding-bottom:60px;">
+    <div class="ambient-blob" style="width:500px;height:500px;background:var(--primary);top:0;left:50%;transform:translateX(-50%);filter:blur(140px);opacity:0.07;"></div>
+
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-5 col-md-7">
+
+          <div class="text-center mb-5 fade-in">
+            <div class="live-indicator mb-4">
+              <span class="pulse-dot"></span>
+              LIVE FARE COMPARISON
+            </div>
+            <h1 class="fw-bold mb-3" style="font-size:clamp(1.8rem,4vw,2.5rem);letter-spacing:-0.03em;">
+              Where are you<br><span class="gradient-text">headed?</span>
+            </h1>
+            <p style="color:var(--text-muted); font-size:0.88rem;">
+              Compare Uber, Ola & Rapido across 80+ locations — instantly.
+            </p>
+          </div>
+
+          <div class="compare-card fade-in-1">
+            <!-- FROM field -->
+            <div class="mb-4">
+              <label class="form-label-custom">From</label>
+              <div class="location-search-wrap" id="fromWrap">
+                <input
+                  type="text"
+                  class="location-input-field"
+                  id="fromInput"
+                  placeholder="Search pickup location…"
+                  autocomplete="off"
+                  spellcheck="false"
+                >
+                <button class="location-clear-btn" id="fromClear" tabindex="-1" aria-label="Clear">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  </svg>
+                </button>
+                <div class="location-suggestions" id="fromSuggestions"></div>
+              </div>
+            </div>
+
+            <!-- Swap row -->
+            <div class="d-flex align-items-center my-3">
+              <div class="flex-grow-1" style="height:1px;background:var(--border);"></div>
+              <button id="swapBtn" class="swap-btn mx-3">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 2v8M3 10l-2-2M3 10l2-2M13 14V6M13 6l-2 2M13 6l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <div class="flex-grow-1" style="height:1px;background:var(--border);"></div>
+            </div>
+
+            <!-- TO field -->
+            <div class="mb-4">
+              <label class="form-label-custom">To</label>
+              <div class="location-search-wrap" id="toWrap">
+                <input
+                  type="text"
+                  class="location-input-field"
+                  id="toInput"
+                  placeholder="Search drop-off location…"
+                  autocomplete="off"
+                  spellcheck="false"
+                >
+                <button class="location-clear-btn" id="toClear" tabindex="-1" aria-label="Clear">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  </svg>
+                </button>
+                <div class="location-suggestions" id="toSuggestions"></div>
+              </div>
+            </div>
+
+            <div id="errorMessage" class="alert-custom d-none mb-3"></div>
+
+            <button id="compareBtn" class="btn btn-primary-custom w-100 mt-2" disabled>
+              <span>Compare Fares</span>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+
+            <p class="text-center mt-3 mb-0" style="color:var(--text-muted); font-size:0.8rem;">
+              Select pickup and drop-off to begin
+            </p>
+          </div>
+
+          <div class="mt-5 fade-in-2">
+            <p class="text-uppercase mb-3" style="letter-spacing:0.12em; font-size:0.68rem; color:var(--text-muted); font-weight:600;">
+              Popular routes
+            </p>
+            <div class="d-grid gap-2" id="popularRoutesContainer"></div>
+          </div>
+
+          <div class="row g-3 mt-4 fade-in-3">
+            <div class="col-4">
+              <div class="stat-card">
+                <div class="stat-value">80+</div>
+                <div class="stat-label">Locations</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="stat-card">
+                <div class="stat-value">3</div>
+                <div class="stat-label">Services</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="stat-card">
+                <div class="stat-value">8</div>
+                <div class="stat-label">Ride Types</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/navbar.js"></script>
+  <script src="/js/compare.js"></script>
+</body>
+</html>

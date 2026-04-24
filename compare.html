@@ -173,6 +173,55 @@
       justify-content: center;
       gap: 8px;
     }
+
+
+    .current-location-btn {
+      border: 1px solid rgba(124, 92, 252, 0.35);
+      background: rgba(124, 92, 252, 0.08);
+      color: var(--text-primary);
+      border-radius: var(--radius-md);
+      padding: 0.7rem 1rem;
+      font-size: 0.86rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      transition: var(--transition);
+    }
+
+    .current-location-btn:hover:not(:disabled) {
+      background: rgba(124, 92, 252, 0.14);
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .current-location-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .suggestion-text small.suggestion-subtext {
+      display: block;
+      margin-top: 2px;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+    }
+
+    .suggestion-source {
+      color: var(--text-muted);
+      font-size: 0.66rem;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      padding: 2px 7px;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body class="grid-bg">
@@ -209,7 +258,7 @@
               Where are you<br><span class="gradient-text">headed?</span>
             </h1>
             <p style="color:var(--text-muted); font-size:0.88rem;">
-              Compare Uber, Ola & Rapido across 80+ locations — instantly.
+              Compare Uber, Ola & Rapido across saved and live map locations — instantly.
             </p>
           </div>
 
@@ -234,6 +283,15 @@
                 <div class="location-suggestions" id="fromSuggestions"></div>
               </div>
             </div>
+
+
+            <button id="currentLocationBtn" class="current-location-btn mb-4" type="button">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                <path d="M8 14s5-4.7 5-8A5 5 0 003 6c0 3.3 5 8 5 8z" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="8" cy="6" r="1.7" stroke="currentColor" stroke-width="1.4"/>
+              </svg>
+              Use Current Location
+            </button>
 
             <!-- Swap row -->
             <div class="d-flex align-items-center my-3">

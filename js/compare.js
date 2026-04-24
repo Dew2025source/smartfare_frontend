@@ -1,62 +1,62 @@
 // ─────────────────────────────────────────────
-// Compare page — Searchable Location Inputs
+// Compare page — Current location + geocoded search
 // ─────────────────────────────────────────────
 
 const API_BASE = "https://smartfarebackend-production.up.railway.app";
 
-// Selected location values (the "real" state)
 let fromValue = '';
-let toValue   = '';
-
-// All locations from API
+let toValue = '';
+let fromLocation = null;
+let toLocation = null;
 let allLocations = [];
+let searchTimers = {};
+
+const CURRENT_LOCATION_NAME = 'Current Location';
 
 // ─── INIT ───────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   await loadLocations();
   initLocationSearch('from', 'fromInput', 'fromClear', 'fromSuggestions');
-  initLocationSearch('to',   'toInput',   'toClear',   'toSuggestions');
+  initLocationSearch('to', 'toInput', 'toClear', 'toSuggestions');
+  setupCurrentLocation();
   setupSwap();
   setupCompareBtn();
   loadPopularRoutes();
   setupOutsideClick();
 });
 
-// ─── LOAD LOCATIONS ─────────────────────────
+// ─── LOAD KNOWN LOCATIONS ───────────────────
 async function loadLocations() {
   try {
-    const res  = await fetch(`${API_BASE}/api/locations`);
+    const res = await fetch(`${API_BASE}/api/locations`);
     const data = await res.json();
-    if (data.success) allLocations = data.data.locations;
+    if (data.success) allLocations = data.data.locations || [];
   } catch (e) {
     console.error('Error loading locations:', e);
   }
 }
 
 // ─── SEARCHABLE LOCATION WIDGET ─────────────
-/**
- * @param {string} side          - 'from' | 'to'
- * @param {string} inputId       - input element id
- * @param {string} clearId       - clear button id
- * @param {string} suggestionsId - suggestions panel id
- */
 function initLocationSearch(side, inputId, clearId, suggestionsId) {
-  const input       = document.getElementById(inputId);
-  const clearBtn    = document.getElementById(clearId);
+  const input = document.getElementById(inputId);
+  const clearBtn = document.getElementById(clearId);
   const suggestions = document.getElementById(suggestionsId);
-  let highlightIdx  = -1;
+  let highlightIdx = -1;
 
   if (!input || !clearBtn || !suggestions) return;
 
-  // ── Typing ──────────────────────────────
   input.addEventListener('input', () => {
     const q = input.value.trim();
 
-    // If user edits after selecting, clear the stored value
-    if (side === 'from' && fromValue && input.value !== fromValue) fromValue = '';
-    if (side === 'to'   && toValue   && input.value !== toValue)   toValue   = '';
-    updateCompareButton();
+    if (side === 'from') {
+      fromValue = '';
+      fromLocation = null;
+    } else {
+      toValue = '';
+      toLocation = null;
+    }
 
+    updateCompareButton();
     clearBtn.classList.toggle('visible', q.length > 0);
     highlightIdx = -1;
 
@@ -64,18 +64,15 @@ function initLocationSearch(side, inputId, clearId, suggestionsId) {
       closeSuggestions(suggestions);
       return;
     }
+
     renderSuggestions(q, suggestions, input, clearBtn, side);
   });
 
-  // ── Focus: re-show if has text ───────────
   input.addEventListener('focus', () => {
     const q = input.value.trim();
-    if (q.length > 0) {
-      renderSuggestions(q, suggestions, input, clearBtn, side);
-    }
+    if (q.length > 0) renderSuggestions(q, suggestions, input, clearBtn, side);
   });
 
-  // ── Keyboard nav ────────────────────────
   input.addEventListener('keydown', (e) => {
     const items = suggestions.querySelectorAll('.suggestion-item');
     if (!suggestions.classList.contains('open') || items.length === 0) {
@@ -93,24 +90,25 @@ function initLocationSearch(side, inputId, clearId, suggestionsId) {
       applyHighlight(items, highlightIdx);
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (highlightIdx >= 0 && items[highlightIdx]) {
-        items[highlightIdx].click();
-      } else {
-        handleCompare();
-      }
+      if (highlightIdx >= 0 && items[highlightIdx]) items[highlightIdx].click();
+      else handleCompare();
     } else if (e.key === 'Escape') {
       closeSuggestions(suggestions);
       input.blur();
     }
   });
 
-  // ── Clear button ────────────────────────
   clearBtn.addEventListener('click', () => {
     input.value = '';
     clearBtn.classList.remove('visible');
     input.classList.remove('has-value');
-    if (side === 'from') fromValue = '';
-    if (side === 'to')   toValue   = '';
+    if (side === 'from') {
+      fromValue = '';
+      fromLocation = null;
+    } else {
+      toValue = '';
+      toLocation = null;
+    }
     closeSuggestions(suggestions);
     updateCompareButton();
     clearError();
@@ -118,80 +116,180 @@ function initLocationSearch(side, inputId, clearId, suggestionsId) {
   });
 }
 
+// ─── CURRENT LOCATION ───────────────────────
+function setupCurrentLocation() {
+  const btn = document.getElementById('currentLocationBtn');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    clearError();
+
+    if (!navigator.geolocation) {
+      showError('Current location is not supported in this browser.');
+      return;
+    }
+
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border-custom me-2"></span> Detecting…';
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        fromValue = CURRENT_LOCATION_NAME;
+        fromLocation = {
+          name: CURRENT_LOCATION_NAME,
+          displayName: CURRENT_LOCATION_NAME,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          source: 'browser-current-location'
+        };
+
+        const fromInput = document.getElementById('fromInput');
+        const fromClear = document.getElementById('fromClear');
+        if (fromInput) fromInput.value = CURRENT_LOCATION_NAME;
+        syncInputState(fromInput, fromClear, fromValue);
+
+        btn.disabled = false;
+        btn.innerHTML = original;
+        updateCompareButton();
+        clearError();
+      },
+      () => {
+        btn.disabled = false;
+        btn.innerHTML = original;
+        showError('Location permission denied. Allow location access and try again.');
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+    );
+  });
+}
+
 // ─── RENDER SUGGESTIONS ─────────────────────
 function renderSuggestions(query, panel, input, clearBtn, side) {
-  const q       = query.toLowerCase();
-  const matches = allLocations.filter(loc => loc.toLowerCase().includes(q)).slice(0, 6);
+  const q = query.toLowerCase();
+  const localMatches = allLocations
+    .filter(loc => loc.toLowerCase().includes(q))
+    .slice(0, 5)
+    .map(loc => ({ name: loc, displayName: loc, source: 'local' }));
 
-  if (matches.length === 0) {
-    panel.innerHTML = `
-      <div class="suggestion-empty">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.4"/>
-          <path d="M7 4v3.5M7 9.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-        </svg>
-        Location not available
-      </div>`;
+  renderSuggestionItems(localMatches, query, panel, input, clearBtn, side, true);
+
+  clearTimeout(searchTimers[side]);
+  searchTimers[side] = setTimeout(async () => {
+    if (query.trim().length < 3) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/geocode/search?q=${encodeURIComponent(query)}&limit=8`);
+      const data = await res.json();
+      const remoteMatches = data.success ? (data.data.locations || []) : [];
+      renderSuggestionItems(remoteMatches, query, panel, input, clearBtn, side, false);
+    } catch (error) {
+      console.error('Geocode search error:', error);
+      if (localMatches.length === 0) renderEmptySuggestion(panel, 'Search failed. Try a known nearby place.');
+    }
+  }, 350);
+}
+
+function renderSuggestionItems(matches, query, panel, input, clearBtn, side, loadingRemote) {
+  if (!matches.length && loadingRemote) {
+    panel.innerHTML = `<div class="suggestion-empty">Searching more places…</div>`;
     openSuggestions(panel);
     return;
   }
 
-  panel.innerHTML = matches.map(loc => `
-    <div class="suggestion-item" data-loc="${escapeAttr(loc)}" role="option">
+  if (!matches.length) {
+    renderEmptySuggestion(panel, 'Location not found');
+    return;
+  }
+
+  panel.innerHTML = matches.map((loc, idx) => `
+    <div class="suggestion-item" data-index="${idx}" role="option">
       <span class="suggestion-icon">
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
           <path d="M6.5 1C4.567 1 3 2.567 3 4.5c0 2.625 3.5 7.5 3.5 7.5S10 7.125 10 4.5C10 2.567 8.433 1 6.5 1Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
           <circle cx="6.5" cy="4.5" r="1.2" stroke="currentColor" stroke-width="1.1"/>
         </svg>
       </span>
-      <span class="suggestion-text">${highlightMatch(loc, query)}</span>
+      <span class="suggestion-text">
+        ${highlightMatch(loc.name || loc.displayName || query, query)}
+        ${loc.displayName && loc.displayName !== loc.name ? `<small class="suggestion-subtext">${escapeHtml(shortDisplayName(loc.displayName))}</small>` : ''}
+      </span>
+      <span class="suggestion-source">${loc.source === 'local' ? 'Saved' : 'Map'}</span>
     </div>
   `).join('');
 
-  // Bind click
   panel.querySelectorAll('.suggestion-item').forEach(item => {
-    item.addEventListener('mousedown', (e) => {
-      e.preventDefault(); // Prevent blur before click fires
-    });
+    item.addEventListener('mousedown', e => e.preventDefault());
     item.addEventListener('click', () => {
-      const loc = item.dataset.loc;
-      input.value = loc;
-      input.classList.add('has-value');
-      clearBtn.classList.add('visible');
-      if (side === 'from') fromValue = loc;
-      if (side === 'to')   toValue   = loc;
-      closeSuggestions(panel);
-      updateCompareButton();
-      clearError();
-      loadPopularRoutes();
+      const loc = matches[Number(item.dataset.index)];
+      selectLocation(side, loc, input, clearBtn, panel);
     });
   });
 
   openSuggestions(panel);
 }
 
-// ─── HIGHLIGHT MATCH ────────────────────────
-function highlightMatch(text, query) {
-  const idx = text.toLowerCase().indexOf(query.toLowerCase());
-  if (idx === -1) return escapeHtml(text);
-  return (
-    escapeHtml(text.slice(0, idx)) +
-    `<mark>${escapeHtml(text.slice(idx, idx + query.length))}</mark>` +
-    escapeHtml(text.slice(idx + query.length))
-  );
+function renderEmptySuggestion(panel, text) {
+  panel.innerHTML = `
+    <div class="suggestion-empty">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M7 4v3.5M7 9.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      ${escapeHtml(text)}
+    </div>`;
+  openSuggestions(panel);
 }
 
-// ─── KEYBOARD HIGHLIGHT ─────────────────────
+function selectLocation(side, loc, input, clearBtn, panel) {
+  const label = loc.name || loc.displayName || input.value.trim();
+  input.value = label;
+  input.classList.add('has-value');
+  clearBtn.classList.add('visible');
+
+  const selected = {
+    name: label,
+    displayName: loc.displayName || label,
+    lat: Number(loc.lat),
+    lng: Number(loc.lng),
+    source: loc.source || 'local'
+  };
+
+  if (side === 'from') {
+    fromValue = label;
+    fromLocation = Number.isFinite(selected.lat) && Number.isFinite(selected.lng) ? selected : null;
+  } else {
+    toValue = label;
+    toLocation = Number.isFinite(selected.lat) && Number.isFinite(selected.lng) ? selected : null;
+  }
+
+  closeSuggestions(panel);
+  updateCompareButton();
+  clearError();
+  loadPopularRoutes();
+}
+
+// ─── HELPERS ────────────────────────────────
+function highlightMatch(text, query) {
+  text = String(text || '');
+  query = String(query || '');
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return escapeHtml(text);
+  return escapeHtml(text.slice(0, idx)) + `<mark>${escapeHtml(text.slice(idx, idx + query.length))}</mark>` + escapeHtml(text.slice(idx + query.length));
+}
+
+function shortDisplayName(displayName) {
+  return String(displayName).split(',').slice(0, 3).join(',').trim();
+}
+
 function applyHighlight(items, idx) {
   items.forEach((item, i) => item.classList.toggle('highlighted', i === idx));
   if (items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
 }
 
-// ─── OPEN / CLOSE SUGGESTIONS ───────────────
-function openSuggestions(panel)  { panel.classList.add('open'); }
+function openSuggestions(panel) { panel.classList.add('open'); }
 function closeSuggestions(panel) { panel.classList.remove('open'); }
 
-// ─── OUTSIDE CLICK ──────────────────────────
 function setupOutsideClick() {
   document.addEventListener('click', (e) => {
     ['fromWrap', 'toWrap'].forEach(wrapId => {
@@ -204,23 +302,21 @@ function setupOutsideClick() {
   });
 }
 
-// ─── SWAP ────────────────────────────────────
+// ─── SWAP ───────────────────────────────────
 function setupSwap() {
   document.getElementById('swapBtn')?.addEventListener('click', () => {
     const fromInput = document.getElementById('fromInput');
-    const toInput   = document.getElementById('toInput');
+    const toInput = document.getElementById('toInput');
     const fromClear = document.getElementById('fromClear');
-    const toClear   = document.getElementById('toClear');
+    const toClear = document.getElementById('toClear');
     if (!fromInput || !toInput) return;
 
-    // Swap display text
     [fromInput.value, toInput.value] = [toInput.value, fromInput.value];
-    // Swap stored values
     [fromValue, toValue] = [toValue, fromValue];
+    [fromLocation, toLocation] = [toLocation, fromLocation];
 
-    // Sync has-value class + clear visibility
     syncInputState(fromInput, fromClear, fromValue);
-    syncInputState(toInput,   toClear,   toValue);
+    syncInputState(toInput, toClear, toValue);
 
     updateCompareButton();
     clearError();
@@ -229,11 +325,12 @@ function setupSwap() {
 }
 
 function syncInputState(input, clearBtn, value) {
+  if (!input || !clearBtn) return;
   input.classList.toggle('has-value', !!value);
   clearBtn.classList.toggle('visible', !!value);
 }
 
-// ─── COMPARE BUTTON ──────────────────────────
+// ─── COMPARE BUTTON ─────────────────────────
 function setupCompareBtn() {
   document.getElementById('compareBtn')?.addEventListener('click', handleCompare);
 }
@@ -243,9 +340,9 @@ function updateCompareButton() {
   if (btn) btn.disabled = !(fromValue && toValue && fromValue !== toValue);
 }
 
-// ─── HANDLE COMPARE ──────────────────────────
 async function handleCompare() {
   clearError();
+
   if (!fromValue || !toValue) {
     showError('Please select both pickup and drop-off locations.');
     return;
@@ -261,36 +358,57 @@ async function handleCompare() {
   btn.disabled = true;
 
   try {
-    const res  = await fetch(`${API_BASE}/api/route?from=${encodeURIComponent(fromValue)}&to=${encodeURIComponent(toValue)}`);
-    const data = await res.json();
+    let data;
+
+    if (fromLocation || toLocation) {
+      const res = await fetch(`${API_BASE}/api/route/coords`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: fromLocation || fromValue,
+          to: toLocation || toValue
+        })
+      });
+      data = await res.json();
+    } else {
+      const res = await fetch(`${API_BASE}/api/route?from=${encodeURIComponent(fromValue)}&to=${encodeURIComponent(toValue)}`);
+      data = await res.json();
+    }
 
     if (!data.success) {
-      showError(`No direct route found between ${fromValue} and ${toValue}. Try swapping or picking nearby locations.`);
+      showError(data.message || `No route found between ${fromValue} and ${toValue}.`);
       btn.innerHTML = original;
       btn.disabled = false;
       return;
     }
 
-    await new Promise(r => setTimeout(r, 600));
-    const params = new URLSearchParams({ from: fromValue, to: toValue, distance: data.data.route.distance });
+    await new Promise(r => setTimeout(r, 400));
+    const route = data.data.route;
+    const params = new URLSearchParams({
+      from: route.from || fromValue,
+      to: route.to || toValue,
+      distance: route.distance,
+      source: route.source || 'osrm'
+    });
+
     window.location.href = `/results?${params.toString()}`;
   } catch (e) {
     console.error('Route check error:', e);
     showError('Error checking route. Please try again.');
     btn.innerHTML = original;
-    btn.disabled  = false;
+    btn.disabled = false;
   }
 }
 
-// ─── POPULAR ROUTES ──────────────────────────
+// ─── POPULAR ROUTES ─────────────────────────
 function loadPopularRoutes() {
   const popularRoutes = [
-    { from: 'Rohini',          to: 'Connaught Place', distance: 18 },
-    { from: 'Dwarka',          to: 'Connaught Place', distance: 22 },
+    { from: 'Rohini', to: 'Connaught Place', distance: 18 },
+    { from: 'Dwarka', to: 'Connaught Place', distance: 22 },
     { from: 'Noida Sector 18', to: 'Connaught Place', distance: 22 },
-    { from: 'Gurgaon',         to: 'Connaught Place', distance: 28 },
-    { from: 'IGI Airport',     to: 'Connaught Place', distance: 16 },
-    { from: 'Lajpat Nagar',    to: 'Connaught Place', distance: 8  },
+    { from: 'Gurgaon', to: 'Connaught Place', distance: 28 },
+    { from: 'IGI Airport', to: 'Connaught Place', distance: 16 },
+    { from: 'Lajpat Nagar', to: 'Connaught Place', distance: 8 },
   ];
 
   const container = document.getElementById('popularRoutesContainer');
@@ -314,25 +432,27 @@ function loadPopularRoutes() {
 
 function selectPopularRoute(from, to) {
   const fromInput = document.getElementById('fromInput');
-  const toInput   = document.getElementById('toInput');
+  const toInput = document.getElementById('toInput');
   const fromClear = document.getElementById('fromClear');
-  const toClear   = document.getElementById('toClear');
+  const toClear = document.getElementById('toClear');
   if (!fromInput || !toInput) return;
 
   fromInput.value = from;
-  toInput.value   = to;
+  toInput.value = to;
   fromValue = from;
-  toValue   = to;
+  toValue = to;
+  fromLocation = null;
+  toLocation = null;
 
   syncInputState(fromInput, fromClear, fromValue);
-  syncInputState(toInput,   toClear,   toValue);
+  syncInputState(toInput, toClear, toValue);
 
   updateCompareButton();
   clearError();
   loadPopularRoutes();
 }
 
-// ─── ERROR HELPERS ────────────────────────────
+// ─── ERROR HELPERS ──────────────────────────
 function clearError() {
   const el = document.getElementById('errorMessage');
   if (el) el.classList.add('d-none');
@@ -340,13 +460,17 @@ function clearError() {
 
 function showError(msg) {
   const el = document.getElementById('errorMessage');
-  if (el) { el.textContent = msg; el.classList.remove('d-none'); }
+  if (el) {
+    el.textContent = msg;
+    el.classList.remove('d-none');
+  }
 }
 
-// ─── UTILS ────────────────────────────────────
+// ─── UTILS ──────────────────────────────────
 function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+
 function escapeAttr(str) {
-  return str.replace(/'/g, "\\'");
+  return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }

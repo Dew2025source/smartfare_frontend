@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/compare", "destination": "/compare.html" },
+    { "source": "/results", "destination": "/results.html" },
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/signup", "destination": "/signup.html" },
+    { "source": "/my-rides", "destination": "/my-rides.html" },
+    { "source": "/contact", "destination": "/contact.html" }
+  ]
+}

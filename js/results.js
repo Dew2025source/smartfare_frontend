@@ -5,14 +5,30 @@ let fares = [];
 let from = '';
 let to = '';
 let distance = 0;
+let duration = 0;
+let fromCoords = null;
+let toCoords = null;
+let resultsMap = null;
+let resultsRouteLayer = null;
+let resultsMarkerLayer = null;
 
 document.addEventListener('DOMContentLoaded', function () {
   const params = new URLSearchParams(window.location.search);
   from = params.get('from');
   to = params.get('to');
   distance = parseFloat(params.get('distance'));
+  duration = parseFloat(params.get('duration')) || 0;
+
+  const fromLat = Number(params.get('fromLat'));
+  const fromLng = Number(params.get('fromLng'));
+  const toLat = Number(params.get('toLat'));
+  const toLng = Number(params.get('toLng'));
+  if (Number.isFinite(fromLat) && Number.isFinite(fromLng)) fromCoords = { lat: fromLat, lng: fromLng };
+  if (Number.isFinite(toLat) && Number.isFinite(toLng)) toCoords = { lat: toLat, lng: toLng };
 
   if (from && to && distance) {
+    initResultsMap();
+    loadResultsRouteMap();
     calculateAndDisplayFares();
   } else {
     window.location.href = '/compare';
@@ -47,6 +63,7 @@ async function calculateAndDisplayFares() {
   document.getElementById('routeFrom').textContent = from;
   document.getElementById('routeTo').textContent = to;
   document.getElementById('routeDistance').textContent = `${distance} km`;
+  updateMapSummary(distance, duration);
 
   const container = document.getElementById('faresContainer');
   renderSkeletons(container);
@@ -142,6 +159,132 @@ function displayFares() {
       </div>
     `;
   }).join('');
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+
+function initResultsMap() {
+  if (typeof L === 'undefined') {
+    setMapStatus('Map library failed to load. Route distance is still available.');
+    return;
+  }
+
+  const mapEl = document.getElementById('resultsRouteMap');
+  if (!mapEl || resultsMap) return;
+
+  resultsMap = L.map(mapEl, {
+    zoomControl: true,
+    attributionControl: true,
+    scrollWheelZoom: false,
+    preferCanvas: true
+  }).setView([28.7041, 77.1025], 9);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    crossOrigin: true,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(resultsMap);
+
+  resultsMarkerLayer = L.layerGroup().addTo(resultsMap);
+  setTimeout(() => resultsMap.invalidateSize(true), 100);
+  setTimeout(() => resultsMap.invalidateSize(true), 500);
+}
+
+async function loadResultsRouteMap() {
+  if (!resultsMap) return;
+  setMapStatus('Drawing road route…');
+
+  try {
+    const body = {
+      from: fromCoords ? { ...fromCoords, name: from } : from,
+      to: toCoords ? { ...toCoords, name: to } : to
+    };
+
+    const res = await fetch(`${API_BASE}/api/route/coords`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (!data.success || !data.data || !data.data.route) {
+      throw new Error(data.message || 'Route not found');
+    }
+
+    drawResultsRoute(data.data.route);
+  } catch (error) {
+    console.warn('Results map route failed:', error);
+    drawFallbackRoute();
+    setMapStatus('Map route could not load. Distance result is still correct.');
+  }
+}
+
+function drawResultsRoute(route) {
+  if (!resultsMap || !route.fromCoords || !route.toCoords) return;
+
+  if (resultsRouteLayer) {
+    resultsMap.removeLayer(resultsRouteLayer);
+    resultsRouteLayer = null;
+  }
+  if (resultsMarkerLayer) resultsMarkerLayer.clearLayers();
+
+  const fromLatLng = [Number(route.fromCoords.lat), Number(route.fromCoords.lng)];
+  const toLatLng = [Number(route.toCoords.lat), Number(route.toCoords.lng)];
+
+  L.marker(fromLatLng).addTo(resultsMarkerLayer).bindPopup(`Pickup: ${escapeHtml(route.from || from)}`);
+  L.marker(toLatLng).addTo(resultsMarkerLayer).bindPopup(`Drop: ${escapeHtml(route.to || to)}`);
+
+  if (route.geometry && Array.isArray(route.geometry.coordinates) && route.geometry.coordinates.length) {
+    const latLngs = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+    resultsRouteLayer = L.polyline(latLngs, { weight: 5, opacity: 0.9 }).addTo(resultsMap);
+    resultsMap.fitBounds(resultsRouteLayer.getBounds(), { padding: [28, 28], maxZoom: 15 });
+  } else {
+    resultsRouteLayer = L.polyline([fromLatLng, toLatLng], { weight: 5, opacity: 0.75 }).addTo(resultsMap);
+    resultsMap.fitBounds(L.latLngBounds([fromLatLng, toLatLng]), { padding: [28, 28], maxZoom: 15 });
+  }
+
+  if (route.distance) distance = Number(route.distance) || distance;
+  if (route.durationMinutes) duration = Number(route.durationMinutes) || duration;
+  updateMapSummary(distance, duration);
+
+  setTimeout(() => resultsMap.invalidateSize(true), 150);
+  setMapStatus('');
+}
+
+function drawFallbackRoute() {
+  if (!resultsMap || !fromCoords || !toCoords) return;
+  if (resultsMarkerLayer) resultsMarkerLayer.clearLayers();
+  if (resultsRouteLayer) resultsMap.removeLayer(resultsRouteLayer);
+
+  const fromLatLng = [fromCoords.lat, fromCoords.lng];
+  const toLatLng = [toCoords.lat, toCoords.lng];
+  L.marker(fromLatLng).addTo(resultsMarkerLayer).bindPopup(`Pickup: ${escapeHtml(from)}`);
+  L.marker(toLatLng).addTo(resultsMarkerLayer).bindPopup(`Drop: ${escapeHtml(to)}`);
+  resultsRouteLayer = L.polyline([fromLatLng, toLatLng], { weight: 5, opacity: 0.75, dashArray: '8 8' }).addTo(resultsMap);
+  resultsMap.fitBounds(L.latLngBounds([fromLatLng, toLatLng]), { padding: [28, 28], maxZoom: 15 });
+  setTimeout(() => resultsMap.invalidateSize(true), 150);
+}
+
+function updateMapSummary(km, mins) {
+  const d = document.getElementById('mapDistanceText');
+  const t = document.getElementById('mapDurationText');
+  if (d) d.textContent = `${Number(km || 0).toFixed(1).replace(/\.0$/, '')} km`;
+  if (t) t.textContent = mins ? `${Math.round(mins)} min` : '-- min';
+}
+
+function setMapStatus(message) {
+  const el = document.getElementById('mapStatus');
+  if (!el) return;
+  if (!message) {
+    el.classList.add('d-none');
+    el.textContent = '';
+  } else {
+    el.textContent = message;
+    el.classList.remove('d-none');
+  }
 }
 
 async function bookRide(service, rideType, price, index) {

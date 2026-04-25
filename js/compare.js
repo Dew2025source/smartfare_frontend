@@ -10,6 +10,10 @@ let fromLocation = null;
 let toLocation = null;
 let allLocations = [];
 let searchTimers = {};
+let routeMap = null;
+let routeLayer = null;
+let markerLayer = null;
+let mapPreviewTimer = null;
 
 const CURRENT_LOCATION_NAME = 'Current Location';
 
@@ -19,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initLocationSearch('from', 'fromInput', 'fromClear', 'fromSuggestions');
   initLocationSearch('to', 'toInput', 'toClear', 'toSuggestions');
   setupCurrentLocation();
+  setupRouteMap();
   setupSwap();
   setupCompareBtn();
   loadPopularRoutes();
@@ -57,6 +62,7 @@ function initLocationSearch(side, inputId, clearId, suggestionsId) {
     }
 
     updateCompareButton();
+    hideRouteMapPreview();
     clearBtn.classList.toggle('visible', q.length > 0);
     highlightIdx = -1;
 
@@ -111,6 +117,7 @@ function initLocationSearch(side, inputId, clearId, suggestionsId) {
     }
     closeSuggestions(suggestions);
     updateCompareButton();
+    hideRouteMapPreview();
     clearError();
     input.focus();
   });
@@ -174,6 +181,7 @@ function setupCurrentLocation() {
         btn.disabled = false;
         btn.innerHTML = original;
         updateCompareButton();
+        updateRouteMapPreview();
         clearError();
       },
       () => {
@@ -287,6 +295,7 @@ function selectLocation(side, loc, input, clearBtn, panel) {
 
   closeSuggestions(panel);
   updateCompareButton();
+  updateRouteMapPreview();
   clearError();
   loadPopularRoutes();
 }
@@ -341,6 +350,7 @@ function setupSwap() {
     syncInputState(toInput, toClear, toValue);
 
     updateCompareButton();
+    updateRouteMapPreview();
     clearError();
     loadPopularRoutes();
   });
@@ -470,6 +480,7 @@ function selectPopularRoute(from, to) {
   syncInputState(toInput, toClear, toValue);
 
   updateCompareButton();
+  updateRouteMapPreview();
   clearError();
   loadPopularRoutes();
 }
@@ -495,4 +506,118 @@ function escapeHtml(str) {
 
 function escapeAttr(str) {
   return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+// ─── LIVE ROUTE MAP (LEAFLET + OPENSTREETMAP + OSRM) ───
+function setupRouteMap() {
+  if (typeof L === 'undefined') return;
+
+  const mapEl = document.getElementById('routeMap');
+  if (!mapEl) return;
+
+  routeMap = L.map(mapEl, {
+    zoomControl: true,
+    attributionControl: true,
+    scrollWheelZoom: false
+  }).setView([28.6139, 77.2090], 11);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(routeMap);
+
+  markerLayer = L.layerGroup().addTo(routeMap);
+}
+
+function updateRouteMapPreview() {
+  clearTimeout(mapPreviewTimer);
+
+  if (!fromValue || !toValue || fromValue === toValue) {
+    hideRouteMapPreview();
+    return;
+  }
+
+  mapPreviewTimer = setTimeout(loadRouteMapPreview, 450);
+}
+
+async function loadRouteMapPreview() {
+  if (!routeMap) return;
+
+  const card = document.getElementById('routeMapCard');
+  const loading = document.getElementById('mapLoadingText');
+  if (!card || !loading) return;
+
+  card.classList.add('visible');
+  loading.classList.remove('d-none');
+
+  setTimeout(() => routeMap.invalidateSize(), 80);
+
+  try {
+    const res = await fetch(`${API_BASE}/api/route/coords`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: fromLocation || fromValue,
+        to: toLocation || toValue
+      })
+    });
+
+    const data = await res.json();
+    if (!data.success || !data.data || !data.data.route) throw new Error(data.message || 'Route not found');
+
+    drawRouteOnMap(data.data.route);
+  } catch (error) {
+    console.warn('Map preview failed:', error);
+    hideRouteMapPreview(false);
+  } finally {
+    loading.classList.add('d-none');
+  }
+}
+
+function drawRouteOnMap(route) {
+  if (!routeMap || !route.fromCoords || !route.toCoords) return;
+
+  if (routeLayer) {
+    routeMap.removeLayer(routeLayer);
+    routeLayer = null;
+  }
+  if (markerLayer) markerLayer.clearLayers();
+
+  const fromLatLng = [route.fromCoords.lat, route.fromCoords.lng];
+  const toLatLng = [route.toCoords.lat, route.toCoords.lng];
+
+  L.marker(fromLatLng).addTo(markerLayer).bindPopup(`Pickup: ${escapeHtml(route.from || fromValue)}`);
+  L.marker(toLatLng).addTo(markerLayer).bindPopup(`Drop: ${escapeHtml(route.to || toValue)}`);
+
+  if (route.geometry && route.geometry.coordinates && route.geometry.coordinates.length) {
+    const latLngs = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+    routeLayer = L.polyline(latLngs, {
+      weight: 5,
+      opacity: 0.9
+    }).addTo(routeMap);
+    routeMap.fitBounds(routeLayer.getBounds(), { padding: [28, 28] });
+  } else {
+    routeLayer = L.polyline([fromLatLng, toLatLng], { weight: 5, opacity: 0.75 }).addTo(routeMap);
+    routeMap.fitBounds(L.latLngBounds([fromLatLng, toLatLng]), { padding: [28, 28] });
+  }
+
+  const distanceEl = document.getElementById('mapDistance');
+  const durationEl = document.getElementById('mapDuration');
+  if (distanceEl) distanceEl.textContent = `${route.distance || '--'} km`;
+  if (durationEl) durationEl.textContent = `${route.durationMinutes || '--'} min`;
+}
+
+function hideRouteMapPreview(clear = true) {
+  const card = document.getElementById('routeMapCard');
+  const loading = document.getElementById('mapLoadingText');
+  if (card) card.classList.remove('visible');
+  if (loading) loading.classList.add('d-none');
+
+  if (clear && routeMap) {
+    if (routeLayer) {
+      routeMap.removeLayer(routeLayer);
+      routeLayer = null;
+    }
+    if (markerLayer) markerLayer.clearLayers();
+  }
 }

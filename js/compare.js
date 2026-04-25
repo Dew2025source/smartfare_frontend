@@ -518,12 +518,14 @@ function setupRouteMap() {
   routeMap = L.map(mapEl, {
     zoomControl: true,
     attributionControl: true,
-    scrollWheelZoom: false
-  }).setView([28.6139, 77.2090], 11);
+    scrollWheelZoom: false,
+    preferCanvas: true
+  }).setView([28.9845, 77.7064], 10);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  // Uses OpenStreetMap data through CARTO tiles. This is faster on mobile than the public OSM tile server.
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
   }).addTo(routeMap);
 
   markerLayer = L.layerGroup().addTo(routeMap);
@@ -550,7 +552,8 @@ async function loadRouteMapPreview() {
   card.classList.add('visible');
   loading.classList.remove('d-none');
 
-  setTimeout(() => routeMap.invalidateSize(), 80);
+  setTimeout(() => routeMap.invalidateSize(true), 80);
+  setTimeout(() => routeMap.invalidateSize(true), 350);
 
   try {
     const res = await fetch(`${API_BASE}/api/route/coords`, {
@@ -595,10 +598,12 @@ function drawRouteOnMap(route) {
       weight: 5,
       opacity: 0.9
     }).addTo(routeMap);
-    routeMap.fitBounds(routeLayer.getBounds(), { padding: [28, 28] });
+    routeMap.fitBounds(routeLayer.getBounds(), { padding: [24, 24], maxZoom: 15 });
+    setTimeout(() => routeMap.invalidateSize(true), 200);
   } else {
     routeLayer = L.polyline([fromLatLng, toLatLng], { weight: 5, opacity: 0.75 }).addTo(routeMap);
-    routeMap.fitBounds(L.latLngBounds([fromLatLng, toLatLng]), { padding: [28, 28] });
+    routeMap.fitBounds(L.latLngBounds([fromLatLng, toLatLng]), { padding: [24, 24], maxZoom: 15 });
+    setTimeout(() => routeMap.invalidateSize(true), 200);
   }
 
   const distanceEl = document.getElementById('mapDistance');

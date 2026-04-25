@@ -796,7 +796,7 @@ select.form-control-custom option {
   box-shadow: var(--shadow-sm);
 }
 
-/* ─── ANIMATIONS ─── */
+
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(24px); }
   to { opacity: 1; transform: translateY(0); }
@@ -837,13 +837,7 @@ select.form-control-custom option {
   .hero-title { font-size: 1.9rem; }
   .compare-card { padding: 1.2rem; }
 }
-/*
-  ── my-rides additions ──────────────────────────────────────────────────────
-  Paste these rules into your existing styles.css (or append at the end).
-  They only add / override what my-rides needs — nothing else is touched.
-  ──────────────────────────────────────────────────────────────────────────── */
 
-/* Prevent body scroll while modal is open (set via JS) */
 body.modal-open {
   overflow: hidden;
 }
@@ -992,4 +986,23 @@ body.modal-open {
 
 :root[data-theme="light"] ::-webkit-scrollbar-track {
   background: #eef2f7;
+}
+#resultsRouteMap {
+  width: 100% !important;
+  height: 420px !important;
+  min-height: 420px !important;
+  display: block;
+}
+
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.leaflet-tile-container img,
+.leaflet-tile {
+  width: 256px !important;
+  height: 256px !important;
+  max-width: none !important;
+  max-height: none !important;
 }

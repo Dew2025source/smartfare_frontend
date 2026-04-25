@@ -27,8 +27,12 @@ document.addEventListener('DOMContentLoaded', function () {
   if (Number.isFinite(toLat) && Number.isFinite(toLng)) toCoords = { lat: toLat, lng: toLng };
 
   if (from && to && distance) {
-    initResultsMap();
+    setTimeout(() => {
+  initResultsMap();
+  setTimeout(() => {
     loadResultsRouteMap();
+  }, 200);
+}, 100);
     calculateAndDisplayFares();
   } else {
     window.location.href = '/compare';
@@ -171,14 +175,17 @@ function initResultsMap() {
     setMapStatus('Map library failed to load. Route distance is still available.');
     return;
   }
-
+ if (resultsMap) {
+    resultsMap.remove();
+    resultsMap = null;
+  }
   const mapEl = document.getElementById('resultsRouteMap');
   if (!mapEl || resultsMap) return;
 
   resultsMap = L.map(mapEl, {
     zoomControl: true,
     attributionControl: true,
-    scrollWheelZoom: false,
+    scrollWheelZoom: true,
     preferCanvas: true
   }).setView([28.7041, 77.1025], 9);
 
@@ -189,8 +196,9 @@ function initResultsMap() {
   }).addTo(resultsMap);
 
   resultsMarkerLayer = L.layerGroup().addTo(resultsMap);
-  setTimeout(() => resultsMap.invalidateSize(true), 100);
-  setTimeout(() => resultsMap.invalidateSize(true), 500);
+  setTimeout(() => resultsMap.invalidateSize(true), 200);
+setTimeout(() => resultsMap.invalidateSize(true), 800);
+setTimeout(() => resultsMap.invalidateSize(true), 1500);
 }
 
 async function loadResultsRouteMap() {
@@ -264,7 +272,11 @@ function drawFallbackRoute() {
   L.marker(fromLatLng).addTo(resultsMarkerLayer).bindPopup(`Pickup: ${escapeHtml(from)}`);
   L.marker(toLatLng).addTo(resultsMarkerLayer).bindPopup(`Drop: ${escapeHtml(to)}`);
   resultsRouteLayer = L.polyline([fromLatLng, toLatLng], { weight: 5, opacity: 0.75, dashArray: '8 8' }).addTo(resultsMap);
-  resultsMap.fitBounds(L.latLngBounds([fromLatLng, toLatLng]), { padding: [28, 28], maxZoom: 15 });
+  resultsMap.fitBounds(resultsRouteLayer.getBounds(), { padding: [40, 40], maxZoom: 15 });
+
+setTimeout(() => {
+  resultsMap.invalidateSize(true);
+}, 300);
   setTimeout(() => resultsMap.invalidateSize(true), 150);
 }
 

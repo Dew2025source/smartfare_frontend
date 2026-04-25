@@ -987,22 +987,70 @@ body.modal-open {
 :root[data-theme="light"] ::-webkit-scrollbar-track {
   background: #eef2f7;
 }
+/* Leaflet final repair */
 #resultsRouteMap {
   width: 100% !important;
   height: 420px !important;
   min-height: 420px !important;
-  display: block;
+  display: block !important;
+  position: relative !important;
+  overflow: hidden !important;
 }
 
-.leaflet-container {
+#resultsRouteMap .leaflet-container {
   width: 100% !important;
   height: 100% !important;
 }
 
-.leaflet-tile-container img,
-.leaflet-tile {
+#resultsRouteMap .leaflet-pane,
+#resultsRouteMap .leaflet-map-pane,
+#resultsRouteMap .leaflet-tile-pane,
+#resultsRouteMap .leaflet-overlay-pane,
+#resultsRouteMap .leaflet-marker-pane,
+#resultsRouteMap .leaflet-shadow-pane,
+#resultsRouteMap .leaflet-tile-container {
+  position: absolute !important;
+}
+
+#resultsRouteMap .leaflet-tile,
+#resultsRouteMap .leaflet-tile-container img {
   width: 256px !important;
   height: 256px !important;
+  min-width: 256px !important;
+  min-height: 256px !important;
   max-width: none !important;
   max-height: none !important;
+  object-fit: initial !important;
+  box-sizing: content-box !important;
+}
+
+#resultsRouteMap img {
+  max-width: none !important;
+}
+
+#resultsRouteMap .leaflet-control-container,
+#resultsRouteMap .leaflet-top,
+#resultsRouteMap .leaflet-bottom {
+  position: absolute !important;
+  z-index: 1000 !important;
+}
+
+#resultsRouteMap .leaflet-top {
+  top: 0 !important;
+}
+
+#resultsRouteMap .leaflet-left {
+  left: 0 !important;
+}
+
+#resultsRouteMap .leaflet-bottom {
+  bottom: 0 !important;
+}
+
+#resultsRouteMap .leaflet-right {
+  right: 0 !important;
+}
+
+.results-map-card {
+  overflow: hidden !important;
 }

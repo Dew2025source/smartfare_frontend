@@ -27,12 +27,12 @@ document.addEventListener('DOMContentLoaded', function () {
   if (Number.isFinite(toLat) && Number.isFinite(toLng)) toCoords = { lat: toLat, lng: toLng };
 
   if (from && to && distance) {
-    setTimeout(() => {
-  initResultsMap();
-  setTimeout(() => {
-    loadResultsRouteMap();
-  }, 200);
-}, 100);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        initResultsMap();
+        loadResultsRouteMap();
+      }, 50);
+    });
     calculateAndDisplayFares();
   } else {
     window.location.href = '/compare';
@@ -170,35 +170,55 @@ function escapeHtml(str) {
 }
 
 
+function refreshResultsMap() {
+  if (!resultsMap) return;
+  requestAnimationFrame(() => {
+    if (resultsMap) resultsMap.invalidateSize(true);
+    setTimeout(() => { if (resultsMap) resultsMap.invalidateSize(true); }, 300);
+    setTimeout(() => { if (resultsMap) resultsMap.invalidateSize(true); }, 800);
+    setTimeout(() => { if (resultsMap) resultsMap.invalidateSize(true); }, 1500);
+  });
+}
+
+window.addEventListener("resize", refreshResultsMap);
+
 function initResultsMap() {
   if (typeof L === 'undefined') {
     setMapStatus('Map library failed to load. Route distance is still available.');
     return;
   }
- if (resultsMap) {
+
+  delete L.Icon.Default.prototype._getIconUrl;
+
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+    iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png"
+  });
+  
+  const mapEl = document.getElementById('resultsRouteMap');
+  if (!mapEl) return;
+
+  if (resultsMap) {
     resultsMap.remove();
     resultsMap = null;
   }
-  const mapEl = document.getElementById('resultsRouteMap');
-  if (!mapEl || resultsMap) return;
 
-  resultsMap = L.map(mapEl, {
+  resultsMap = L.map("resultsRouteMap", {
     zoomControl: true,
     attributionControl: true,
-    scrollWheelZoom: true,
-    preferCanvas: true
-  }).setView([28.7041, 77.1025], 9);
+    scrollWheelZoom: true
+  });
 
-  L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
-    crossOrigin: true,
-    attribution: '&copy; OpenStreetMap contributors'
+    tileSize: 256,
+    zoomOffset: 0,
+    attribution: "&copy; OpenStreetMap contributors"
   }).addTo(resultsMap);
 
   resultsMarkerLayer = L.layerGroup().addTo(resultsMap);
-  setTimeout(() => resultsMap.invalidateSize(true), 200);
-setTimeout(() => resultsMap.invalidateSize(true), 800);
-setTimeout(() => resultsMap.invalidateSize(true), 1500);
+  refreshResultsMap();
 }
 
 async function loadResultsRouteMap() {
@@ -258,7 +278,7 @@ function drawResultsRoute(route) {
   if (route.durationMinutes) duration = Number(route.durationMinutes) || duration;
   updateMapSummary(distance, duration);
 
-  setTimeout(() => resultsMap.invalidateSize(true), 150);
+  refreshResultsMap();
   setMapStatus('');
 }
 
@@ -274,10 +294,7 @@ function drawFallbackRoute() {
   resultsRouteLayer = L.polyline([fromLatLng, toLatLng], { weight: 5, opacity: 0.75, dashArray: '8 8' }).addTo(resultsMap);
   resultsMap.fitBounds(resultsRouteLayer.getBounds(), { padding: [40, 40], maxZoom: 15 });
 
-setTimeout(() => {
-  resultsMap.invalidateSize(true);
-}, 300);
-  setTimeout(() => resultsMap.invalidateSize(true), 150);
+  refreshResultsMap();
 }
 
 function updateMapSummary(km, mins) {
@@ -374,6 +391,4 @@ function showToast(message, type) {
 
 const showSuccessToast = msg => showToast(msg, 'success');
 const showErrorToast   = msg => showToast(msg, 'error');
-
-// Legacy compat
 function showSuccessMessage(message) { showSuccessToast(message); }

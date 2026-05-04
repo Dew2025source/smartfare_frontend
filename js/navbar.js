@@ -34,7 +34,7 @@ function updateNavbar() {
       <span class="navbar-text nav-user-text me-3 d-none d-md-inline">
         ${user.name}
       </span>
-      <button class="btn btn-nav-outline btn-sm" onclick="logout()">
+      <button class="btn btn-nav-outline btn-sm" id="logoutBtn">
         Logout
       </button>
     `;
@@ -60,7 +60,18 @@ function updateNavbar() {
       </a>
     `;
   }
+document.addEventListener("click", function (e) {
+  if (e.target.id === "logoutBtn") {
+    const modal = new bootstrap.Modal(
+      document.getElementById("logoutConfirmModal")
+    );
+    modal.show();
+  }
 
+  if (e.target.id === "confirmLogout") {
+    logout();
+  }
+});
   const currentPath = window.location.pathname;
   document.querySelectorAll(".nav-link").forEach((link) => {
     const linkPath = new URL(link.href).pathname;

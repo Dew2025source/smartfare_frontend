@@ -38,18 +38,8 @@ function isLoggedIn() {
 
 // Logout
 function logout() {
-  // Show confirmation modal instead of instant logout
-  const modal = new bootstrap.Modal(document.getElementById('logoutModal'));
-  modal.show();
-}
-function confirmLogout() {
-  // Hide modal then actually log out
-  const modalEl = document.getElementById('logoutModal');
-  bootstrap.Modal.getInstance(modalEl).hide();
-  session.clear();
-  updateNav();
-  showToast('Logged out. See you soon! 👋', 'info');
-  navigate('home');
+  clearAuth();
+  window.location.href = '/login';
 }
 
 // Redirect if not authenticated
